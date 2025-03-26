@@ -1,0 +1,9 @@
+Flask
+celery
+redis
+pandas
+openai
+boto3
+gunicorn
+XlsxWriter
+json
