@@ -18,7 +18,7 @@ def bpd_relevance(keywords, crawl=True):
             total_occurrences += sum(page["text"].count(keyword) for keyword in keywords)
             wordcount += len(page["text"].split())
         score = total_occurrences / (wordcount + 1)
-        result[f"{company_dict["company_name"]}"] = score
+        result[f"{company_dict['company_name']}"] = score
     
     result = dict(sorted(result.items(), key=lambda item: item[1], reverse=True))
     return list(result.keys())
