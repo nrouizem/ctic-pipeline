@@ -5,9 +5,11 @@ from gpt import *
 import re
 
 # Initialize the Celery app (using Redis as the broker)
+broker_url = os.environ.get("CELERY_BROKER_URL")
+result_backend = os.environ.get("CELERY_RESULT_BACKEND")
 celery = Celery('tasks', 
-                broker='redis://localhost:6379/0',
-                backend='redis://localhost:6379/0')
+                broker=broker_url,
+                backend=result_backend)
                 
 
 @celery.task(bind=True)

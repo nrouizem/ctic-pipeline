@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Processing Submission</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f9fa;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .container {
+      background-color: #fff;
+      max-width: 600px;
+      width: 90%;
+      margin: 20px;
+      padding: 30px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      text-align: center;
+    }
+    h1 {
+      color: #343a40;
+      margin-bottom: 20px;
+    }
+    p {
+      color: #495057;
+      line-height: 1.6;
+      margin: 10px 0;
+    }
+    #download a {
+      text-decoration: none;
+      color: #007bff;
+      font-weight: bold;
+    }
+    #download a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Processing Your Submission...</h1>
+    <p><strong>Keywords:</strong> {{ keywords }}</p>
+    <p><strong>Your Unique ID:</strong> {{ request_id }}</p>
+    <p><strong>Researching the following companies of interest:</strong> {{ output }}</p>
+    <p>
+      <strong>Task status:</strong>
+      <span id="status">Waiting for update...</span>
+    </p>
+    <div id="download" style="display:none;">
+      <a href="" id="download_link">Download your Excel file</a>
+    </div>
+  </div>
+  <script>
+    function checkStatus() {
+      fetch('/status/{{ task_id }}')
+        .then(response => response.json())
+        .then(data => {
+          if (data.state === 'SUCCESS') {
+            document.getElementById('status').innerText = data.status;
+            // Display the download link.
+            document.getElementById('download_link').href = '/download/{{ task_id }}';
+            document.getElementById('download').style.display = 'block';
+          } else if (data.state === 'FAILURE') {
+            document.getElementById('status').innerText = "Error processing your request.";
+          } else {
+            document.getElementById('status').innerText = data.status;
+            setTimeout(checkStatus, 2000);
+          }
+        })
+        .catch(error => {
+          document.getElementById('status').innerText = "Error fetching status.";
+          console.error("Error:", error);
+        });
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      checkStatus();
+    });
+  </script>
+</body>
+</html>
