@@ -1,28 +1,4 @@
-import requests
-from bs4 import BeautifulSoup
-import pandas as pd
-import glob
 import json
-from concurrent.futures import ThreadPoolExecutor
-from duckduckgo_search import DDGS
-import time
-from functools import singledispatch
-import matplotlib.pyplot as plt
-import csv
-from tqdm import trange
-from tqdm import tqdm
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-import time
-from bs4 import BeautifulSoup
-import requests
-from sec_api import FullTextSearchApi
-from datetime import datetime
-import os
-
 
 def bpd_relevance(keywords, crawl=True):
     """

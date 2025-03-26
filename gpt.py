@@ -1,9 +1,7 @@
 import pandas as pd
-import openai
 from openai import OpenAI
 import json
 import time
-import config
 import os
 import re
 
