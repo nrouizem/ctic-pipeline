@@ -3,7 +3,7 @@ import boto3
 
 S3_BUCKET = os.environ.get('S3_BUCKET_NAME')
 S3_FILE_KEY = os.environ.get('S3_FILE_KEY')
-LOCAL_FILE_PATH = 'bpd_crawled_data.json'  # Adjust to your desired local path
+LOCAL_FILE_PATH = './bpd_crawled_data.json'  # Adjust to your desired local path
 
 def download_file_from_s3():
     """
