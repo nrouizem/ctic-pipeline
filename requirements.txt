@@ -6,4 +6,3 @@ openai
 boto3
 gunicorn
 XlsxWriter
-json
