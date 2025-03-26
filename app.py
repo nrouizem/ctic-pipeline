@@ -3,12 +3,15 @@ from tasks import enrich_data_task, celery  # celery is our Celery app instance
 import re
 import uuid
 from fetch import *
+from file_downloader import download_file_from_s3
 
 def generate_unique_id():
     # Generate a unique integer (here we take the last 8 digits, adjust as needed)
     return int(uuid.uuid4().int % 10**8)
 
 app = Flask(__name__)
+
+download_file_from_s3()
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
