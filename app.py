@@ -29,6 +29,8 @@ def home():
         request_id = generate_unique_id()
         # Split by commas or whitespace.
         keywords = re.split(r'[,\s]+', keywords)
+        # print keywords to have a way to see what ppl are searching (not great but whatever)
+        print(', '.join(keywords))
         bpd_data = filter(bpd_relevance(keywords))
 
         # Enqueue the enrichment task.
@@ -69,7 +71,7 @@ def download_file(task_id):
         file_buffer.seek(0)
         
         # Use the keywords query parameter in the filename if provided
-        download_name = f"{', '.join(keywords.split(','))}_search_data.xlsx" if keywords else "data.xlsx"
+        download_name = f"{', '.join(keywords.split(','))}_search.xlsx" if keywords else "data.xlsx"
         
         return send_file(
             file_buffer,
