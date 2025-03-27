@@ -76,7 +76,7 @@ def download_file(task_id, keywords):
             file_buffer,
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             as_attachment=True,
-            download_name=f'{', '.join(keywords)}_search_data.xlsx'
+            download_name=f"{', '.join(keywords)}_search_data.xlsx"
         )
     elif task.state == 'PENDING':
         return "File not available yet (task pending)", 202
