@@ -41,6 +41,19 @@
     #download a:hover {
       text-decoration: underline;
     }
+    #search-again button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #28a745;
+      border: none;
+      color: #fff;
+      font-size: 1em;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #search-again button:hover {
+      background-color: #218838;
+    }
   </style>
 </head>
 <body>
@@ -56,7 +69,12 @@
     <div id="download" style="display:none;">
       <a href="" id="download_link">Download your Excel file</a>
     </div>
+    <!-- New section for "Perform another search" -->
+    <div id="search-again">
+      <button onclick="window.location.href='/'">Perform Another Search</button>
+    </div>
   </div>
+
   <script>
     function checkStatus() {
       fetch('/status/{{ task_id }}')

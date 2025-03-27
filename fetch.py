@@ -27,7 +27,7 @@ def bpd_relevance(keywords, crawl=True):
 def filter(results):
     """
     Filter the keyword relevance data to return most relevant results.
-    For now, just return the top 5 results.
+    For now, just return the top 10 results.
     Could potentially return results that surpass some relevance threshold.
     """
-    return results[:5]
+    return results[:10]

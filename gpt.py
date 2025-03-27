@@ -83,7 +83,7 @@ def gpt_prompt(company_name, max_retries=3):
             response = client.chat.completions.create(
                 model="gpt-4o-search-preview",
                 web_search_options={
-                    "search_context_size": "low",
+                    "search_context_size": "high",
                 },
                 messages=messages
             )
