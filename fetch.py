@@ -5,12 +5,13 @@ def bpd_relevance(keywords, crawl=True):
     Returns keyword relevance.
     """
     if crawl:
-        with open("bpd_crawled_data.json", "r") as f:
+        with open("./bpd_crawled_data.json", "r") as f:
             data = json.load(f)
     else:
-        with open("bpd_not_crawled_data.json", "r") as f:
+        with open("./bpd_not_crawled_data.json", "r") as f:
             data = json.load(f)
     result = {}
+    print("LENGTH: ", len(data))
     for company_dict in data:
         total_occurrences = 0
         wordcount = 0
