@@ -6,6 +6,7 @@ import os
 import re
 import io
 import base64
+import concurrent.futures
 
 client = OpenAI(
     api_key = os.environ.get("OPENAI_API_KEY")
@@ -110,26 +111,52 @@ def gpt_prompt(company_name, max_retries=3):
 
 def enrich(companies):
     """
-    Enriches a list of companies and returns an Excel file as a Base64-encoded string.
+    Enriches a list of companies concurrently and returns an Excel file
+    as a Base64-encoded string.
     """
     enriched_data = []
-    for company_name in companies:
-        print(f"Processing {company_name}...")
-        enriched_info = gpt_prompt(company_name)
-        enriched_data.append(enriched_info)
-        time.sleep(1)  # Respect rate limits if needed
-
+    
+    # Choose a sensible max_workers value based on your resource limits.
+    # For I/O-bound tasks, a higher number might work well. For example, 4 or 5.
+    max_workers = 4  
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit tasks for each company
+        future_to_company = {
+            executor.submit(gpt_prompt, company): company for company in companies
+        }
+        
+        for future in concurrent.futures.as_completed(future_to_company):
+            company = future_to_company[future]
+            try:
+                result = future.result()
+            except Exception as exc:
+                print(f"{company} generated an exception: {exc}")
+                # Return a dictionary with null values if the call fails
+                result = {
+                    "Company": company,
+                    "Asset": None,
+                    "Asset Target": None,
+                    "Asset Type": None,
+                    "Modality": None,
+                    "Disease": None,
+                    "Global Highest Phase": None,
+                    "Indication": None,
+                    "Mechanism/Technology": None
+                }
+            enriched_data.append(result)
+            # Optionally, log progress here.
+    
     # Convert the enriched data into a DataFrame
     enriched_df = pd.DataFrame(enriched_data)
-
+    
     # Create an in-memory buffer and write the Excel data
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         enriched_df.to_excel(writer, index=False, sheet_name='Enriched')
-
+    
     # Reset the buffer's position to the beginning
     output.seek(0)
-
+    
     # Convert the Excel bytes to Base64 for easy serialization
     excel_base64 = base64.b64encode(output.read()).decode('utf-8')
     return excel_base64

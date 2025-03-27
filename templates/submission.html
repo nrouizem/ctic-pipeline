@@ -41,8 +41,11 @@
     #download a:hover {
       text-decoration: underline;
     }
-    #search-again button {
+    #search-again {
       margin-top: 20px;
+      display: none;
+    }
+    #search-again button {
       padding: 10px 20px;
       background-color: #28a745;
       border: none;
@@ -69,7 +72,7 @@
     <div id="download" style="display:none;">
       <a href="" id="download_link">Download your Excel file</a>
     </div>
-    <!-- New section for "Perform another search" -->
+    <!-- The "Perform Another Search" button is hidden by default -->
     <div id="search-again">
       <button onclick="window.location.href='/'">Perform Another Search</button>
     </div>
@@ -85,6 +88,8 @@
             // Display the download link.
             document.getElementById('download_link').href = '/download/{{ task_id }}';
             document.getElementById('download').style.display = 'block';
+            // Now that the task is complete, show the "Perform Another Search" button.
+            document.getElementById('search-again').style.display = 'block';
           } else if (data.state === 'FAILURE') {
             document.getElementById('status').innerText = "Error processing your request.";
           } else {
