@@ -18,10 +18,13 @@ def home():
     if request.method == 'POST':
         # Retrieve the keywords (company names) from the form.
         keywords = request.form.get('keywords')
+        print("keywords")
         request_id = generate_unique_id()
+        print("id")
         # Split by commas or whitespace.
         keywords = re.split(r'[,\s]+', keywords)
         bpd_data = filter(bpd_relevance(keywords))
+        print("data received")
 
         # Enqueue the enrichment task.
         task = enrich_data_task.delay(bpd_data)
