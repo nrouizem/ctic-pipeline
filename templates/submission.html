@@ -86,7 +86,7 @@
           if (data.state === 'SUCCESS') {
             document.getElementById('status').innerText = data.status;
             // Display the download link.
-            document.getElementById('download_link').href = '/download/{{ task_id }}';
+            document.getElementById('download_link').href = '/download/{{ task_id }}?keywords={{ keywords|urlencode }}';
             document.getElementById('download').style.display = 'block';
             // Now that the task is complete, show the "Perform Another Search" button.
             document.getElementById('search-again').style.display = 'block';

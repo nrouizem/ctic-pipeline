@@ -56,32 +56,32 @@ def task_status(task_id):
     return jsonify(response)
 
 @app.route('/download/<task_id>')
-def download_file(task_id, keywords):
+def download_file(task_id):
+    keywords = request.args.get('keywords', '')  # defaults to empty string if not provided
     task = celery.AsyncResult(task_id)
     if task.state == 'SUCCESS':
-        # Retrieve the Base64-encoded Excel data
         excel_b64 = task.info.get('excel_data')
         if not excel_b64:
             return "No file data found", 404
         
-        # Decode the Base64 back into bytes
         excel_bytes = base64.b64decode(excel_b64)
-        
-        # Wrap in a BytesIO so Flask can send it as a file
         file_buffer = io.BytesIO(excel_bytes)
         file_buffer.seek(0)
         
-        # Send as a downloadable attachment
+        # Use the keywords query parameter in the filename if provided
+        download_name = f"{', '.join(keywords.split(','))}_search_data.xlsx" if keywords else "data.xlsx"
+        
         return send_file(
             file_buffer,
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             as_attachment=True,
-            download_name=f"{', '.join(keywords)}_search_data.xlsx"
+            download_name=download_name
         )
     elif task.state == 'PENDING':
         return "File not available yet (task pending)", 202
     else:
         return f"Task in state: {task.state}", 202
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
