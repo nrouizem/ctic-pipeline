@@ -4,6 +4,8 @@ import re
 import uuid
 from fetch import *
 from file_downloader import download_file_from_s3
+import base64
+import io
 
 def generate_unique_id():
     # Generate a unique integer (here we take the last 8 digits, adjust as needed)
@@ -54,12 +56,29 @@ def task_status(task_id):
 def download_file(task_id):
     task = celery.AsyncResult(task_id)
     if task.state == 'SUCCESS':
-        file_path = task.info.get('file_path')
-        return send_file(file_path,
-                         as_attachment=True,
-                         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        # Retrieve the Base64-encoded Excel data
+        excel_b64 = task.info.get('excel_data')
+        if not excel_b64:
+            return "No file data found", 404
+        
+        # Decode the Base64 back into bytes
+        excel_bytes = base64.b64decode(excel_b64)
+        
+        # Wrap in a BytesIO so Flask can send it as a file
+        file_buffer = io.BytesIO(excel_bytes)
+        file_buffer.seek(0)
+        
+        # Send as a downloadable attachment
+        return send_file(
+            file_buffer,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name='enriched_data.xlsx'
+        )
+    elif task.state == 'PENDING':
+        return "File not available yet (task pending)", 202
     else:
-        return "File not available yet", 404
+        return f"Task in state: {task.state}", 202
 
 if __name__ == '__main__':
     app.run(debug=True)

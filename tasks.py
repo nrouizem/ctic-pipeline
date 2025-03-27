@@ -1,8 +1,6 @@
 from celery import Celery
-import time
 from fetch import *
 from gpt import *
-import re
 
 # Initialize the Celery app (using Redis as the broker)
 broker_url = os.environ.get("CELERY_BROKER_URL")
@@ -14,5 +12,5 @@ celery = Celery('tasks',
 @celery.task(bind=True)
 def enrich_data_task(self, companies):
     self.update_state(state='PROGRESS', meta={'status': 'Researching companies and assets of interest...'})
-    file_path = enrich(companies)
-    return {'file_path': file_path, 'status': 'Task completed!'}
+    excel_b64 = enrich(companies)
+    return {'excel_data': excel_b64, 'status': 'Task completed!'}

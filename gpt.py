@@ -4,6 +4,8 @@ import json
 import time
 import os
 import re
+import io
+import base64
 
 client = OpenAI(
     api_key = os.environ.get("OPENAI_API_KEY")
@@ -108,8 +110,7 @@ def gpt_prompt(company_name, max_retries=3):
 
 def enrich(companies):
     """
-    Enriches a list of companies and saves the result as an Excel file.
-    Returns the file path to the generated Excel file.
+    Enriches a list of companies and returns an Excel file as a Base64-encoded string.
     """
     enriched_data = []
     for company_name in companies:
@@ -118,11 +119,17 @@ def enrich(companies):
         enriched_data.append(enriched_info)
         time.sleep(1)  # Respect rate limits if needed
 
+    # Convert the enriched data into a DataFrame
     enriched_df = pd.DataFrame(enriched_data)
-    output_file = "data.xlsx"
-    try:
-        enriched_df.to_excel(output_file, index=False)
-        print(f"Enriched data has been saved to {output_file}")
-    except Exception as e:
-        print(f"Error writing to Excel file: {e}")
-    return output_file
+
+    # Create an in-memory buffer and write the Excel data
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        enriched_df.to_excel(writer, index=False, sheet_name='Enriched')
+
+    # Reset the buffer's position to the beginning
+    output.seek(0)
+
+    # Convert the Excel bytes to Base64 for easy serialization
+    excel_base64 = base64.b64encode(output.read()).decode('utf-8')
+    return excel_base64
