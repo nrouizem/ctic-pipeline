@@ -118,7 +118,7 @@ def enrich(companies):
     
     # Choose a sensible max_workers value based on your resource limits.
     # For I/O-bound tasks, a higher number might work well. For example, 4 or 5.
-    max_workers = 4  
+    max_workers = 5
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit tasks for each company
         future_to_company = {
