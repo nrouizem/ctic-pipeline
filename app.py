@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, jsonify, send_file
+from flask import Flask, request, render_template, jsonify, send_file, redirect, url_for, session, flash
 from tasks import enrich_data_task, celery  # celery is our Celery app instance
 import re
 import uuid
@@ -6,17 +6,23 @@ from fetch import *
 from file_downloader import download_file_from_s3
 import base64
 import io
+import os
 
 def generate_unique_id():
     # Generate a unique integer (here we take the last 8 digits, adjust as needed)
     return int(uuid.uuid4().int % 10**8)
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("FLASK_SECRET_KEY")
+app.config['SEARCH_PASSWORD'] = os.environ.get("SEARCH_PASSWORD")
 
 download_file_from_s3()
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
     if request.method == 'POST':
         # Retrieve the keywords (company names) from the form.
         keywords = request.form.get('keywords')
@@ -76,6 +82,18 @@ def download_file(task_id):
         return "File not available yet (task pending)", 202
     else:
         return f"Task in state: {task.state}", 202
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        password = request.form.get('password')
+        if password == app.config['SEARCH_PASSWORD']:
+            session['logged_in'] = True
+            return redirect(url_for('home'))
+        else:
+            flash('Invalid password, please try again.')
+            return render_template('login.html')
+    return render_template('login.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
