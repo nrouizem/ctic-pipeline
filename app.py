@@ -56,7 +56,7 @@ def task_status(task_id):
     return jsonify(response)
 
 @app.route('/download/<task_id>')
-def download_file(task_id):
+def download_file(task_id, keywords):
     task = celery.AsyncResult(task_id)
     if task.state == 'SUCCESS':
         # Retrieve the Base64-encoded Excel data
@@ -76,7 +76,7 @@ def download_file(task_id):
             file_buffer,
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             as_attachment=True,
-            download_name='enriched_data.xlsx'
+            download_name=f'{', '.join(keywords)}_search_data.xlsx'
         )
     elif task.state == 'PENDING':
         return "File not available yet (task pending)", 202

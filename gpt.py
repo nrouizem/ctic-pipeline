@@ -152,7 +152,7 @@ def enrich(companies):
     # Create an in-memory buffer and write the Excel data
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        enriched_df.to_excel(writer, index=False, sheet_name='Enriched')
+        enriched_df.to_excel(writer, index=False, sheet_name='Data')
     
     # Reset the buffer's position to the beginning
     output.seek(0)
