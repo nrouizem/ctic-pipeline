@@ -11,7 +11,7 @@ def generate_unique_id():
 
 app = Flask(__name__)
 
-download_file_from_s3()
+#download_file_from_s3()
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
