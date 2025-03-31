@@ -39,7 +39,7 @@ def build_prompt(record, keywords, search_type):
                     Consult as many sources as needed and use any reliable source.
                     If any information is not available, set its value to null.
         """
-    if search_type == "deal":
+    elif search_type == "deal":
         prompt = f"""
                     You are an expert in biopharmaceutical deal analysis with the ability to search the web for up-to-date information.
                     For the deal involving "{record['acquirer']}" and "{record['acquired_company']}" related to "{' '.join(keywords)}", 
