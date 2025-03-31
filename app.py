@@ -35,7 +35,7 @@ def home():
         keywords = re.split(r'[,\s]+', keywords)
         # print keywords to have a way to see what ppl are searching (not great but whatever)
         print("KEYWORDS: ", ', '.join(keywords))
-        data = filter(search(keywords))
+        data = filter(search(keywords), doc_type="company")
 
         # Enqueue the enrichment task.
         task = enrich_data_task.delay(data)
