@@ -9,15 +9,14 @@ EMBEDDINGS_PATH = 'data/embeddings.npy'
 
 def download_files_from_s3():
     """
-    Checks if the file is present locally; if not, downloads from S3.
+    Checks if the file is present locally; if not, downloads it from S3.
     """
     for KEY, FILE_PATH in [(S3_RECORDS_KEY, RECORDS_PATH), (S3_EMBEDDINGS_KEY, EMBEDDINGS_PATH)]:
         if not os.path.exists(FILE_PATH):
             os.makedirs(os.path.dirname(FILE_PATH), exist_ok=True)
-
-            print("Downloading file from S3...")
+            print(f"Downloading {KEY} to {FILE_PATH} from S3...")
             s3 = boto3.client('s3')
             s3.download_file(S3_BUCKET, KEY, FILE_PATH)
-            print("File downloaded successfully.")
+            print(f"File {FILE_PATH} downloaded successfully.")
         else:
-            print("Local file already exists.")
+            print(f"Local file {FILE_PATH} already exists.")
