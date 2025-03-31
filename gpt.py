@@ -84,8 +84,6 @@ def extract_json_and_source(text):
     
     # Extract the JSON portion.
     json_str = text[json_start:json_end+1]
-    # The remaining text after the JSON block is considered the source.
-    remaining = text[json_end+1:].strip()
     
     # Parse the JSON.
     try:
@@ -93,17 +91,12 @@ def extract_json_and_source(text):
     except json.JSONDecodeError as e:
         raise ValueError("Error parsing JSON: " + str(e))
     
-    # If there's remaining text, add it as a new key.
-    # (scrapping this for now)
-    #if remaining:
-    #    data["Source"] = remaining
-    
     return data
 
 # Function to call the GPT model and parse the returned JSON.
-def gpt_prompt(record, keywords, max_retries=3):
+def gpt_prompt(record, keywords, search_type, max_retries=3):
     company_name = record["company"]
-    prompt = build_prompt(record, keywords)
+    prompt = build_prompt(record, keywords, search_type)
     
     # Set up the conversation for ChatCompletion (if using a chat-based model)
     messages = [
