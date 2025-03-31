@@ -16,3 +16,11 @@ def search(query):
     #Sort by decreasing score
     company_score_pairs = sorted(company_score_pairs, key=lambda x: x[1], reverse=True)
     return company_score_pairs
+
+def filter(company_score_pairs):
+    """
+    Filter the keyword relevance data to return most relevant results.
+    For now, just return the top 10 results.
+    Could potentially return results that surpass some relevance threshold.
+    """
+    return [company for company, score in company_score_pairs[:10]]

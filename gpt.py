@@ -16,12 +16,12 @@ client = OpenAI(
 # The prompt instructs the model to search for the following fields:
 # Company, Asset, Asset Target, Asset Type, Modality, Disease, Global Highest Phase, Indication, Mechanism/Technology.
 # The response should be in valid JSON without any additional commentary.
-def build_prompt(company_name):
+def build_prompt(company_name, keywords):
     prompt = f"""
                 You are an expert in biopharmaceutical research with the ability to search the web for up-to-date information.
                 For the company "{company_name}", please research and provide the following details:
                 1. Company: The full name of the company.
-                2. Asset: The name of the asset or product they are developing.
+                2. Asset: The name of the asset or product they are developing that is related to {' '.join(keywords)}.
                 3. Asset Target: The specific biological target or pathway the asset addresses.
                 4. Asset Type: The specific type of asset (e.g., small molecule, biologic, device, etc.).
                 5. Modality: The specific therapeutic modality being used (e.g., antibody, gene therapy, cell therapy, etc.).

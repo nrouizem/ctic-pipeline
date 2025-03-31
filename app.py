@@ -2,7 +2,7 @@ from flask import Flask, request, render_template, jsonify, send_file, redirect,
 from tasks import enrich_data_task, celery  # celery is our Celery app instance
 import re
 import uuid
-from fetch import *
+from search import *
 from file_downloader import download_file_from_s3
 import base64
 import io
@@ -35,7 +35,7 @@ def home():
         keywords = re.split(r'[,\s]+', keywords)
         # print keywords to have a way to see what ppl are searching (not great but whatever)
         print("KEYWORDS: ", ', '.join(keywords))
-        bpd_data = filter(bpd_relevance(keywords))
+        bpd_data = filter(search(keywords))
 
         # Enqueue the enrichment task.
         task = enrich_data_task.delay(bpd_data)
