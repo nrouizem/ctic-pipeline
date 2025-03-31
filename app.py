@@ -30,12 +30,14 @@ def home():
     if request.method == 'POST':
         # Retrieve the keywords (company names) from the form.
         keywords = request.form.get('keywords')
+        search_types = request.form.getlist('search_types')
         request_id = generate_unique_id()
         # Split by commas or whitespace.
         keywords = re.split(r'[,\s]+', keywords)
-        # print keywords to have a way to see what ppl are searching (not great but whatever)
+        # print input to have a way to see what ppl are searching (not great but whatever)
         print("KEYWORDS: ", ', '.join(keywords))
-        data = filter(search(keywords), doc_type="company")
+        print("SEARCH TYPES: ", ', '.join(search_types))
+        data = filter(search(keywords), doc_type=search_types[0])   # only taking companies for now (figure out multiple sheets later)
 
         # Enqueue the enrichment task.
         task = enrich_data_task.delay(data)

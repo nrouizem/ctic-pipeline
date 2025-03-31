@@ -46,6 +46,18 @@
       border-radius: 4px;
       font-size: 1em;
     }
+    .checkbox-group {
+      text-align: left;
+      width: 100%;
+      max-width: 400px;
+    }
+    .checkbox-group label {
+      font-weight: normal;
+      margin-left: 5px;
+    }
+    .checkbox-item {
+      margin-bottom: 5px;
+    }
     button {
       padding: 10px 20px;
       background-color: #007bff;
@@ -63,11 +75,44 @@
 <body>
   <div class="container">
     <h1>Company and Asset Research</h1>
-    <form method="post" action="/">
+    <form method="post" action="/" id="searchForm">
       <label for="keywords">Enter Keywords:</label>
       <input type="text" id="keywords" name="keywords" placeholder="e.g., ophthalmology" required>
+      
+      <div class="checkbox-group">
+        <p><strong>Select Search Types (choose at least one):</strong></p>
+        <div class="checkbox-item">
+          <input type="checkbox" id="search_deals" name="search_types" value="deals">
+          <label for="search_deals">Deals</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="search_companies" name="search_types" value="companies">
+          <label for="search_companies">Companies</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="search_assets" name="search_types" value="assets">
+          <label for="search_assets">Assets</label>
+        </div>
+      </div>
+      
       <button type="submit">Submit</button>
     </form>
   </div>
+  <script>
+    // Validate that at least one search type is selected
+    document.getElementById("searchForm").addEventListener("submit", function(e) {
+      const checkboxes = document.querySelectorAll('input[name="search_types"]');
+      let isChecked = false;
+      checkboxes.forEach((cb) => {
+        if (cb.checked) {
+          isChecked = true;
+        }
+      });
+      if (!isChecked) {
+        e.preventDefault();
+        alert("Please select at least one search type: Deals, Companies, or Assets.");
+      }
+    });
+  </script>
 </body>
 </html>
