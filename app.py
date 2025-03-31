@@ -3,7 +3,7 @@ from tasks import enrich_data_task, celery  # celery is our Celery app instance
 import re
 import uuid
 from search import *
-from file_downloader import download_file_from_s3
+from file_downloader import download_files_from_s3
 import base64
 import io
 import os
@@ -17,7 +17,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY")
 app.config['SEARCH_PASSWORD'] = os.environ.get("SEARCH_PASSWORD")
 
-download_file_from_s3()
+download_files_from_s3()
 
 # pre-warming cache
 model = SentenceTransformer('multi-qa-mpnet-base-cos-v1')
