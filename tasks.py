@@ -9,7 +9,7 @@ celery = Celery('tasks',
                 backend=result_backend)             
 
 @celery.task(bind=True)
-def enrich_data_task(self, companies, keywords):
+def enrich_data_task(self, records, keywords, search_types):
     self.update_state(state='PROGRESS', meta={'status': 'Researching companies and assets of interest...'})
-    excel_b64 = enrich(companies, keywords)
+    excel_b64 = enrich(records, keywords, search_types)
     return {'excel_data': excel_b64, 'status': 'Task completed!'}
