@@ -1,5 +1,4 @@
 from celery import Celery
-from fetch import *
 from gpt import *
 
 # Initialize the Celery app (using Redis as the broker)
