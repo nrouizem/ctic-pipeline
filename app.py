@@ -30,7 +30,7 @@ def home():
         # Split by commas or whitespace.
         keywords = re.split(r'[,\s]+', keywords)
         # print keywords to have a way to see what ppl are searching (not great but whatever)
-        print(', '.join(keywords))
+        print("KEYWORDS: ", ', '.join(keywords))
         bpd_data = filter(bpd_relevance(keywords))
 
         # Enqueue the enrichment task.
