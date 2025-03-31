@@ -1,8 +1,9 @@
-from sentence_transformers import util
+from sentence_transformers import util, SentenceTransformer
 import json
 import numpy as np
 
-def search(query, model):
+def search(query):
+    model = SentenceTransformer('multi-qa-mpnet-base-cos-v1')
     q_emb = model.encode(query)
     embeddings = np.load("data_collection/data/embeddings.npy")
     scores = util.dot_score(q_emb, embeddings)[0].cpu().tolist()
