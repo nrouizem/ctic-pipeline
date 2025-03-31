@@ -2,9 +2,9 @@ from sentence_transformers import util, SentenceTransformer
 import json
 import numpy as np
 
-def search(query):
+def search(query, search_types):
     model = SentenceTransformer('multi-qa-mpnet-base-cos-v1')
-    q_emb = model.encode(query)
+    q_emb = model.encode(query + " " + " ".join(search_types))
     embeddings = np.load("data/embeddings.npy")
     scores = util.dot_score(q_emb, embeddings)[0].cpu().tolist()
 

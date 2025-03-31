@@ -70,8 +70,8 @@ def extract_json_and_source(text):
     return data
 
 # Function to call the GPT model and parse the returned JSON.
-def gpt_prompt(company_name, max_retries=3):
-    prompt = build_prompt(company_name)
+def gpt_prompt(company_name, keywords, max_retries=3):
+    prompt = build_prompt(company_name, keywords)
     
     # Set up the conversation for ChatCompletion (if using a chat-based model)
     messages = [
@@ -109,7 +109,7 @@ def gpt_prompt(company_name, max_retries=3):
         "Mechanism/Technology": None
     }
 
-def enrich(companies):
+def enrich(companies, keywords):
     """
     Enriches a list of companies concurrently and returns an Excel file
     as a Base64-encoded string.
@@ -122,7 +122,7 @@ def enrich(companies):
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit tasks for each company
         future_to_company = {
-            executor.submit(gpt_prompt, company): company for company in companies
+            executor.submit(gpt_prompt, company, keywords): company for company in companies
         }
         
         for future in concurrent.futures.as_completed(future_to_company):

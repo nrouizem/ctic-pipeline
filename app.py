@@ -37,10 +37,10 @@ def home():
         # print input to have a way to see what ppl are searching (not great but whatever)
         print("KEYWORDS: ", ', '.join(keywords))
         print("SEARCH TYPES: ", ', '.join(search_types))
-        data = filter(search(keywords), doc_type="company")   # only taking companies for now (figure out multiple sheets later)
+        data = filter(search(keywords, search_types), doc_type="company")   # only taking companies for now (figure out multiple sheets later)
 
         # Enqueue the enrichment task.
-        task = enrich_data_task.delay(data)
+        task = enrich_data_task.delay(data, keywords)
         return render_template('submission.html', 
                                keywords=', '.join(keywords), 
                                output = ', '.join(data),
