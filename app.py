@@ -35,13 +35,13 @@ def home():
         keywords = re.split(r'[,\s]+', keywords)
         # print keywords to have a way to see what ppl are searching (not great but whatever)
         print("KEYWORDS: ", ', '.join(keywords))
-        bpd_data = filter(search(keywords))
+        data = filter(search(keywords))
 
         # Enqueue the enrichment task.
-        task = enrich_data_task.delay(bpd_data)
+        task = enrich_data_task.delay(data)
         return render_template('submission.html', 
                                keywords=', '.join(keywords), 
-                               output = ', '.join(bpd_data),
+                               output = ', '.join(data),
                                request_id=request_id,
                                task_id=task.id)
     return render_template('index.html')

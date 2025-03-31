@@ -5,11 +5,11 @@ import numpy as np
 def search(query):
     model = SentenceTransformer('multi-qa-mpnet-base-cos-v1')
     q_emb = model.encode(query)
-    embeddings = np.load("data_collection/data/embeddings.npy")
+    embeddings = np.load("data/embeddings.npy")
     scores = util.dot_score(q_emb, embeddings)[0].cpu().tolist()
 
     #Combine docs & scores
-    with open("data_collection/data/records.json", 'r') as f:
+    with open("data/records.json", 'r') as f:
         records = json.load(f)
     company_score_pairs = list(zip(records, scores))
 
