@@ -6,3 +6,4 @@ openai
 boto3
 gunicorn
 XlsxWriter
+sentence_transformers
