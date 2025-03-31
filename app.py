@@ -7,6 +7,7 @@ from file_downloader import download_file_from_s3
 import base64
 import io
 import os
+from sentence_transformers import SentenceTransformer
 
 def generate_unique_id():
     # Generate a unique integer (here we take the last 8 digits, adjust as needed)
@@ -17,6 +18,9 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY")
 app.config['SEARCH_PASSWORD'] = os.environ.get("SEARCH_PASSWORD")
 
 download_file_from_s3()
+
+# pre-warming cache
+model = SentenceTransformer('multi-qa-mpnet-base-cos-v1')
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
