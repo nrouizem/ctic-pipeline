@@ -34,6 +34,9 @@ def build_prompt(record, keywords, search_type):
                     Please return the results as a JSON object with keys:
                     "Company", "Asset", "Asset Target", "Asset Type", "Modality", "Disease", "Global Highest Phase", "Indication", "Mechanism/Technology".
 
+                    You also have the following as a resource, which you may consider factual information about the company:
+                    {record['combined_text']}
+
                     Return only the JSON object without any additional commentary. 
                     It is essential that you be as detailed, thorough, and accurate as possible. 
                     Consult as many sources as needed and use any reliable source.
@@ -134,50 +137,59 @@ def gpt_prompt(record, keywords, search_type, max_retries=3):
         "Mechanism/Technology": None
     }
 
-def enrich(records, keywords, search_types):
+def enrich(records, keywords):
     """
-    Enriches a list of companies concurrently for each search type and returns an Excel file
+    Enriches a list of records concurrently and returns an Excel file
     (as a Base64-encoded string) with one sheet per search type.
+    The search type is taken from record["type"] (e.g., "company", "deal", "asset").
     """
-    search_type_dataframes = {}
+    # Dictionary to collect enriched data grouped by search type.
+    search_type_data = {}
     max_workers = 5
 
-    # Process each search type separately.
-    for search_type in search_types:
-        enriched_data = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Submit tasks for each company for the current search type.
-            future_to_company = {
-                executor.submit(gpt_prompt, record, keywords, search_type): record 
-                for record in records
-            }
-            for future in concurrent.futures.as_completed(future_to_company):
-                company = future_to_company[future]
-                try:
-                    result = future.result()
-                except Exception as exc:
-                    print(f"{company} generated an exception: {exc}")
-                    result = {
-                        "Company": company,
-                        "Asset": None,
-                        "Asset Target": None,
-                        "Asset Type": None,
-                        "Modality": None,
-                        "Disease": None,
-                        "Global Highest Phase": None,
-                        "Indication": None,
-                        "Mechanism/Technology": None
-                    }
-                enriched_data.append(result)
-        # Convert the enriched data for this search type into a DataFrame.
-        enriched_df = pd.DataFrame(enriched_data)
-        search_type_dataframes[search_type] = enriched_df
+    # Process each record concurrently.
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_record = {
+            executor.submit(gpt_prompt, record, keywords): record 
+            for record in records
+        }
+        for future in concurrent.futures.as_completed(future_to_record):
+            record = future_to_record[future]
+            try:
+                result = future.result()
+            except Exception as exc:
+                print(f"{record} generated an exception: {exc}")
+                result = {
+                    "Company": record.get("company", None),
+                    "Asset": None,
+                    "Asset Target": None,
+                    "Asset Type": None,
+                    "Modality": None,
+                    "Disease": None,
+                    "Global Highest Phase": None,
+                    "Indication": None,
+                    "Mechanism/Technology": None
+                }
+            # Add the search type from the original record to the result.
+            record_type = record.get("type", "Unknown")
+            result["type"] = record_type
 
-    # Write each search type's DataFrame to its own sheet in the Excel workbook.
+            # Group the result by its search type.
+            if record_type not in search_type_data:
+                search_type_data[record_type] = []
+            search_type_data[record_type].append(result)
+    
+    # Convert the grouped data into separate DataFrames.
+    search_type_dataframes = {}
+    for st, data in search_type_data.items():
+        df = pd.DataFrame(data)
+        search_type_dataframes[st] = df
+
+    # Write each DataFrame to its own sheet in an Excel workbook.
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         for st, df in search_type_dataframes.items():
-            # Ensure sheet names are within Excel's 31-character limit.
+            # Ensure the sheet name is within Excel's 31-character limit.
             sheet_name = st if len(st) <= 31 else st[:31]
             df.to_excel(writer, index=False, sheet_name=sheet_name)
     output.seek(0)
