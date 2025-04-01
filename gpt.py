@@ -70,7 +70,7 @@ def build_prompt(record, keywords):
                     If any information is not available, set its value to null.
         """
     else:
-        raise Exception(f"Invalid search type: {record["type"]}")
+        raise Exception(f"Invalid search type: {record['type']}")
 
     return prompt.strip()
 
