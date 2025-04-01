@@ -16,8 +16,8 @@ client = OpenAI(
 # The prompt instructs the model to search for the following fields:
 # Company, Asset, Asset Target, Asset Type, Modality, Disease, Global Highest Phase, Indication, Mechanism/Technology.
 # The response should be in valid JSON without any additional commentary.
-def build_prompt(record, keywords, search_type):
-    if search_type == "company":
+def build_prompt(record, keywords):
+    if record["type"] == "company":
         prompt = f"""
                     You are an expert in biopharmaceutical research with the ability to search the web for up-to-date information.
                     For the company "{record['company']}", please research and provide the following details:
@@ -42,7 +42,7 @@ def build_prompt(record, keywords, search_type):
                     Consult as many sources as needed and use any reliable source.
                     If any information is not available, set its value to null.
         """
-    elif search_type == "deal":
+    elif record["type"] == "deal":
         prompt = f"""
                     You are an expert in biopharmaceutical deal analysis with the ability to search the web for up-to-date information.
                     For the deal involving "{record['acquirer']}" and "{record['acquired_company']}" related to "{' '.join(keywords)}", 
@@ -70,7 +70,7 @@ def build_prompt(record, keywords, search_type):
                     If any information is not available, set its value to null.
         """
     else:
-        raise Exception(f"Invalid search type: {search_type}")
+        raise Exception(f"Invalid search type: {record["type"]}")
 
     return prompt.strip()
 
@@ -97,9 +97,9 @@ def extract_json_and_source(text):
     return data
 
 # Function to call the GPT model and parse the returned JSON.
-def gpt_prompt(record, keywords, search_type, max_retries=3):
+def gpt_prompt(record, keywords, max_retries=3):
     company_name = record["company"]
-    prompt = build_prompt(record, keywords, search_type)
+    prompt = build_prompt(record, keywords)
     
     # Set up the conversation for ChatCompletion (if using a chat-based model)
     messages = [
@@ -155,6 +155,7 @@ def enrich(records, keywords):
         }
         for future in concurrent.futures.as_completed(future_to_record):
             record = future_to_record[future]
+            print("TYPE ", type(record))
             try:
                 result = future.result()
             except Exception as exc:
