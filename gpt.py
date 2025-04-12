@@ -145,11 +145,24 @@ def enrich(records, keywords):
     (as a Base64-encoded string) with one sheet per search type.
     The search type is taken from record["type"] (e.g., "company", "deal", "asset").
     """
-    # Dictionary to collect enriched data grouped by search type.
+    # Define expected columns per record type
+    EXPECTED_COLUMNS = {
+        "deal": [
+            "Acquirer", "Target Company", "Deal Type", "Deal Value",
+            "Payment Structure", "Financial Advisors", "Announcement Date",
+            "Deal Terms", "Strategic Rationale", "Additional Details"
+        ],
+        "company": [
+            "Company", "Asset", "Asset Target", "Asset Type",
+            "Modality", "Disease", "Global Highest Phase",
+            "Indication", "Mechanism/Technology"
+        ],
+        # Add "asset": [...] here if needed
+    }
+
     search_type_data = {}
     max_workers = 5
 
-    # Process each record concurrently.
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_record = {
             executor.submit(gpt_prompt, record, keywords): record 
@@ -173,31 +186,26 @@ def enrich(records, keywords):
                     "Indication": None,
                     "Mechanism/Technology": None
                 }
-            # Add the search type from the original record to the result.
             record_type = record.get("type", "Unknown")
             result["type"] = record_type
 
-            # Group the result by its search type.
             if record_type not in search_type_data:
                 search_type_data[record_type] = []
             search_type_data[record_type].append(result)
-    
-    # Convert the grouped data into separate DataFrames.
+
     search_type_dataframes = {}
     for st, data in search_type_data.items():
-        COLUMNS = [
-            "Acquirer", "Target Company", "Deal Type", "Deal Value",
-            "Payment Structure", "Financial Advisors", "Announcement Date",
-            "Deal Terms", "Strategic Rationale", "Additional Details", "type"
-        ]
-        df = pd.DataFrame(data)[COLUMNS]
+        df = pd.DataFrame(data)
+        expected_cols = EXPECTED_COLUMNS.get(st)
+        if expected_cols:
+            df = df[[col for col in expected_cols if col in df.columns]]
+        # Final safety drop of 'type' column
+        df = df.drop(columns=["type"], errors="ignore")
         search_type_dataframes[st] = df
 
-    # Write each DataFrame to its own sheet in an Excel workbook.
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         for st, df in search_type_dataframes.items():
-            # Ensure the sheet name is within Excel's 31-character limit.
             sheet_name = st if len(st) <= 31 else st[:31]
             df.to_excel(writer, index=False, sheet_name=sheet_name)
     output.seek(0)
