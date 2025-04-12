@@ -34,10 +34,11 @@ def build_prompt(record, keywords):
                     Please return the results as a JSON object with keys:
                     "Company", "Asset", "Asset Target", "Asset Type", "Modality", "Disease", "Global Highest Phase", "Indication", "Mechanism/Technology".
 
-                    You also have the following as a resource, which you may consider factual information about the company:
+                    You also have the following as a resource (you do not have to use this information, but you may):
                     {record['combined_text']}
 
-                    Return only the JSON object without any additional commentary. 
+                    Return only the JSON object without any additional commentary.
+                    Format each entry within the JSON object as natural language in plain English. Avoid nested data structures.
                     It is essential that you be as detailed, thorough, and accurate as possible. 
                     Consult as many sources as needed and use any reliable source.
                     If any information is not available, set its value to null.
@@ -61,10 +62,11 @@ def build_prompt(record, keywords):
                     Please return the results as a JSON object with keys:
                     "Acquirer", "Target Company", "Deal Type", "Deal Value", "Payment Structure", "Financial Advisors", "Announcement Date", "Deal Terms", "Strategic Rationale", "Additional Details".
 
-                    You also have the following as a resource, which you may consider factual information about the deal:
+                    You also have the following as a resource (you do not have to use this information, but you may):
                     {record['combined_text']}
 
                     Return only the JSON object without any additional commentary.
+                    Format each entry within the JSON object as natural language in plain English. Avoid nested data structures.
                     It is essential that you be as detailed, thorough, and accurate as possible.
                     Consult as many online sources as needed and use any reliable source.
                     If any information is not available, set its value to null.
@@ -183,7 +185,12 @@ def enrich(records, keywords):
     # Convert the grouped data into separate DataFrames.
     search_type_dataframes = {}
     for st, data in search_type_data.items():
-        df = pd.DataFrame(data)
+        COLUMNS = [
+            "Acquirer", "Target Company", "Deal Type", "Deal Value",
+            "Payment Structure", "Financial Advisors", "Announcement Date",
+            "Deal Terms", "Strategic Rationale", "Additional Details", "type"
+        ]
+        df = pd.DataFrame(data)[COLUMNS]
         search_type_dataframes[st] = df
 
     # Write each DataFrame to its own sheet in an Excel workbook.
