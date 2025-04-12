@@ -40,7 +40,9 @@ def home():
 
         records = []
         for search_type in search_types:
-            records.append(filter(search(', '.join(keywords), search_types), doc_type=search_type))
+            matched = search(' '.join(keywords), [search_type])  # restrict context
+            filtered = filter(matched, doc_type=search_type)
+            records.extend(filtered)  # flatten, not append
 
         # Enqueue the enrichment task.
         task = enrich_data_task.delay(records, keywords)
