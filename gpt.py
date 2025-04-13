@@ -157,16 +157,29 @@ def enrich(records, keywords):
             "Modality", "Disease", "Global Highest Phase",
             "Indication", "Mechanism/Technology"
         ],
+        "trial": [
+            "BriefTitle", "NCTId", "TherapeuticArea", "StudyType", "Disease",
+            "Interventions", "Phase", "Sponsor", "Countries"
+        ]
         # Add "asset": [...] here if needed
     }
 
-    search_type_data = {}
+    search_type_data = {"trial": []}
     max_workers = 5
+
+    # Separate trial records and process non-trials concurrently
+    non_trial_records = [r for r in records if r.get("type") != "trial"]
+    trial_records = [r for r in records if r.get("type") == "trial"]
+
+    # Save cleaned trial records immediately (no GPT)
+    for record in trial_records:
+        clean_record = {k: v for k, v in record.items() if k not in ("type", "combined_text")}
+        search_type_data["trial"].append(clean_record)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_record = {
             executor.submit(gpt_prompt, record, keywords): record 
-            for record in records
+            for record in non_trial_records
         }
         for future in concurrent.futures.as_completed(future_to_record):
             record = future_to_record[future]
