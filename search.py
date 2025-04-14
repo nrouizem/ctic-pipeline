@@ -23,4 +23,9 @@ def filter(company_score_pairs, doc_type):
     For now, just return the top 10 results.
     Could potentially return results that surpass some relevance threshold.
     """
-    return [record for record, score in company_score_pairs[:10] if record["type"] == doc_type]
+    records = []
+    for record, score in company_score_pairs:
+        if len(records) == 10:
+            return records
+        if record["type"] == doc_type:
+            records.append(record)
