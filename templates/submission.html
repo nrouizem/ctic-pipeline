@@ -69,6 +69,11 @@
       <strong>Task status:</strong>
       <span id="status">Waiting for update...</span>
     </p>
+    <div id="progress-wrapper" style="margin-top:8px; display:none;">
+      <div id="progress-bar"
+           style="height:16px;width:0%;background:#17a2b8;border-radius:4px;"></div>
+    </div>
+    <p id="percent-text" style="display:none;">0 %</p>
     <div id="download" style="display:none;">
       <a href="" id="download_link">Download your Excel file</a>
     </div>
@@ -83,6 +88,19 @@
       fetch('/status/{{ task_id }}')
         .then(response => response.json())
         .then(data => {
+
+          // always show status text
+          document.getElementById('status').innerText = data.status || data.state;
+
+          // if we have progress numbers, update bar
+          if ('percent' in data) {
+            const pct = data.percent || 0;
+            document.getElementById('progress-wrapper').style.display = 'block';
+            document.getElementById('percent-text').style.display = 'block';
+            document.getElementById('progress-bar').style.width = pct + '%';
+            document.getElementById('percent-text').innerText = pct + ' %';
+          }
+
           if (data.state === 'SUCCESS') {
             document.getElementById('status').innerText = data.status;
             // Display the download link.
@@ -90,6 +108,9 @@
             document.getElementById('download').style.display = 'block';
             // Now that the task is complete, show the "Perform Another Search" button.
             document.getElementById('search-again').style.display = 'block';
+            // hide bar + text
+            document.getElementById('progress-wrapper').style.display = 'none';
+            document.getElementById('percent-text').style.display = 'none';
           } else if (data.state === 'FAILURE') {
             document.getElementById('status').innerText = "Error processing your request.";
           } else {

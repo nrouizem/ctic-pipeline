@@ -69,6 +69,10 @@ def task_status(task_id):
             'state': task.state,
             'status': task.info.get('status', '') if isinstance(task.info, dict) else str(task.info),
             'result': task.info.get('file_path', '') if isinstance(task.info, dict) else task.info,
+            'status': task.info.get('status', '') if isinstance(task.info, dict) else str(task.info),
+            'current': task.info.get('current', 0),
+            'total':   task.info.get('total', 0),
+            'percent': task.info.get('percent', 0),
         }
     else:
         response = {'state': task.state, 'status': str(task.info)}

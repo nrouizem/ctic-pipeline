@@ -141,7 +141,7 @@ def gpt_prompt(record, keywords, max_retries=3):
         "Mechanism/Technology": None
     }
 
-def enrich(records, keywords):
+def enrich(records, keywords, progress_cb=None):
     """
     Enriches a list of records concurrently and returns an Excel file
     (as a Base64-encoded string) with one sheet per search type.
@@ -172,6 +172,7 @@ def enrich(records, keywords):
     # Separate trial records and process non-trials concurrently
     non_trial_records = [r for r in records if r.get("type") != "trial"]
     trial_records = [r for r in records if r.get("type") == "trial"]
+    total = len(non_trial_records)
 
     # Save cleaned trial records immediately (no GPT)
     for record in trial_records:
@@ -183,6 +184,7 @@ def enrich(records, keywords):
             executor.submit(gpt_prompt, record, keywords): record 
             for record in non_trial_records
         }
+        completed = 0
         for future in concurrent.futures.as_completed(future_to_record):
             record = future_to_record[future]
             print("TYPE ", type(record))
@@ -207,6 +209,10 @@ def enrich(records, keywords):
             if record_type not in search_type_data:
                 search_type_data[record_type] = []
             search_type_data[record_type].append(result)
+
+            completed += 1
+            if progress_cb:
+                progress_cb(completed, total)
 
     search_type_dataframes = {}
     for st, data in search_type_data.items():

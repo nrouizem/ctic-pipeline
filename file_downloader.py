@@ -1,5 +1,6 @@
 import os
 import boto3
+import datetime
 
 S3_BUCKET = os.environ.get('S3_BUCKET_NAME')
 S3_RECORDS_KEY = os.environ.get('S3_RECORDS_KEY')
@@ -12,10 +13,11 @@ def download_files_from_s3():
     Checks if the file is present locally; if not, downloads it from S3.
     """
     for KEY, FILE_PATH in [(S3_RECORDS_KEY, RECORDS_PATH), (S3_EMBEDDINGS_KEY, EMBEDDINGS_PATH)]:
-        if not os.path.exists(FILE_PATH):
+        s3 = boto3.client('s3')
+        s3_mtime = s3.head_object(Bucket=S3_BUCKET, Key=KEY)['LastModified']
+        if not os.path.exists(FILE_PATH) or datetime.utcfromtimestamp(os.path.getmtime(FILE_PATH)) < s3_mtime.replace(tzinfo=None):
             os.makedirs(os.path.dirname(FILE_PATH), exist_ok=True)
             print(f"Downloading {KEY} to {FILE_PATH} from S3...")
-            s3 = boto3.client('s3')
             s3.download_file(S3_BUCKET, KEY, FILE_PATH)
             print(f"File {FILE_PATH} downloaded successfully.")
         else:
