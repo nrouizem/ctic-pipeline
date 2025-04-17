@@ -1,0 +1,6 @@
+__pycache__/
+data/
+data_collection/
+ideas and thoughts.md
+run_celery.sh
+run_local.sh
