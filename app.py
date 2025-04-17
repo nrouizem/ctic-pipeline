@@ -41,7 +41,7 @@ def home():
         records = []
         output = ""
         for search_type in search_types:
-            matched = search(' '.join(keywords), [search_type])  # restrict context
+            matched = search(' '.join(keywords), [search_type], model)  # restrict context
             filtered = filter(matched, doc_type=search_type)
             records.extend(filtered)
             print([record["type"] for record in records])

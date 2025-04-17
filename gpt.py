@@ -110,8 +110,8 @@ def gpt_prompt(record, keywords, max_retries=3):
     ]
     
     for attempt in range(max_retries):
-        # for testing, don't spend $ unnecessarily
-        break
+        if os.getenv("DRY_RUN"):
+            break
         try:
             response = client.chat.completions.create(
                 model="gpt-4o-search-preview",
