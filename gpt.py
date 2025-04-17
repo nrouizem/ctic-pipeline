@@ -166,7 +166,7 @@ def enrich(records, keywords, progress_cb=None):
         # Add "asset": [...] here if needed
     }
 
-    search_type_data = {"trial": []}
+    search_type_data = {}
     max_workers = 5
 
     # Separate trial records and process non-trials concurrently
@@ -177,7 +177,7 @@ def enrich(records, keywords, progress_cb=None):
     # Save cleaned trial records immediately (no GPT)
     for record in trial_records:
         clean_record = {k: v for k, v in record.items() if k not in ("type", "combined_text")}
-        search_type_data["trial"].append(clean_record)
+        search_type_data.setdefault("trial", []).append(clean_record)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_record = {

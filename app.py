@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, jsonify, send_file, redirect, url_for, session, flash
+from flask import Flask, request, render_template, jsonify, send_file, redirect, url_for, session, flash, abort
 from tasks import enrich_data_task, celery  # celery is our Celery app instance
 import re
 import uuid
@@ -8,6 +8,8 @@ import base64
 import io
 import os
 from sentence_transformers import SentenceTransformer
+import boto3, datetime
+
 
 def generate_unique_id():
     # Generate a unique integer (here we take the last 8 digits, adjust as needed)
@@ -17,7 +19,11 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY")
 app.config['SEARCH_PASSWORD'] = os.environ.get("SEARCH_PASSWORD")
 
+S3_BUCKET = os.environ.get('S3_BUCKET_NAME')
+s3 = boto3.client("s3")
 download_files_from_s3()
+if not S3_BUCKET:
+    raise RuntimeError("S3_BUCKET env‑var is required")
 
 # pre-warming cache
 model = SentenceTransformer('multi-qa-mpnet-base-cos-v1')
@@ -51,7 +57,7 @@ def home():
                 output += ""
 
         # Enqueue the enrichment task.
-        task = enrich_data_task.delay(records, keywords)
+        task = enrich_data_task.delay(records, keywords, request_id)
         return render_template('submission.html', 
                                keywords=', '.join(keywords), 
                                output=output,
@@ -78,32 +84,57 @@ def task_status(task_id):
         response = {'state': task.state, 'status': str(task.info)}
     return jsonify(response)
 
-@app.route('/download/<task_id>')
+@app.route("/download/<task_id>")
 def download_file(task_id):
-    keywords = request.args.get('keywords', '')  # defaults to empty string if not provided
+    """Return a 302 redirect to a pre‑signed S3 object, or JSON status if pending."""
+    keywords = request.args.get("keywords", "")   # purely for analytics, not used now
     task = celery.AsyncResult(task_id)
-    if task.state == 'SUCCESS':
-        excel_b64 = task.info.get('excel_data')
-        if not excel_b64:
-            return "No file data found", 404
-        
-        excel_bytes = base64.b64decode(excel_b64)
-        file_buffer = io.BytesIO(excel_bytes)
-        file_buffer.seek(0)
-        
-        # Use the keywords query parameter in the filename if provided
-        download_name = f"{', '.join(keywords.split(','))}_search.xlsx" if keywords else "data.xlsx"
-        
-        return send_file(
-            file_buffer,
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            as_attachment=True,
-            download_name=download_name
+
+    # ---------------------------- PENDING / RUNNING ----------------------------
+    if task.state == "PENDING":
+        return jsonify({"state": task.state,
+                        "status": "File not available yet (task pending)"}), 202
+
+    if task.state not in ("SUCCESS", "FAILURE"):
+        # still running (e.g. PROGRESS)
+        return jsonify({"state": task.state,
+                        "status": task.info.get("status", "")}), 202
+
+    # ---------------------------- FAILURE --------------------------------------
+    if task.state == "FAILURE":
+        # surface the traceback or a generic error
+        return jsonify({"state": task.state, "status": str(task.info)}), 500
+
+    # ---------------------------- SUCCESS --------------------------------------
+    # Celery task returns {'status': 'Task completed!', 's3_key': 'results/…xlsx'}
+    s3_key = task.info.get("s3_key")
+    if not s3_key:
+        abort(404, description="Result key missing in task metadata")
+
+    try:
+
+        filename = task.info.get("filename", os.path.basename(s3_key))
+
+        presigned_url = s3.generate_presigned_url(
+            "get_object",
+            Params={
+                "Bucket": S3_BUCKET,
+                "Key": s3_key,
+                # Force the browser’s save‑as name
+                "ResponseContentDisposition": f'attachment; filename="{filename}"',
+            },
+            ExpiresIn=900,
+            HttpMethod="GET",
         )
-    elif task.state == 'PENDING':
-        return "File not available yet (task pending)", 202
-    else:
-        return f"Task in state: {task.state}", 202
+    except Exception as e:
+        app.logger.exception("Failed to generate pre‑signed URL")
+        abort(500, description="Unable to generate download link")
+
+    # Optional: log for audit
+    app.logger.info("Redirecting download for %s to %s", task_id, s3_key)
+
+    # Fastest UX: just HTTP‑redirect the browser to S3
+    return redirect(presigned_url, code=302)
 
 
 @app.route('/login', methods=['GET', 'POST'])
