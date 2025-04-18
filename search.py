@@ -2,6 +2,9 @@ from sentence_transformers import util, SentenceTransformer, CrossEncoder
 import json
 import numpy as np
 from rank_bm25 import BM25Okapi
+from file_downloader import download_files_from_s3
+
+download_files_from_s3()
 
 with open("data/records.json", 'r') as f:
     records = json.load(f)
