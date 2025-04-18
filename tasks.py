@@ -36,7 +36,6 @@ def _upload_excel(raw_bytes: bytes, keywords, rid) -> str:
 @celery.task(bind=True)
 def enrich_data_task(self, records, keywords, request_id):
     self.update_state(state='PROGRESS', meta={'status': 'Researching companies and assets of interest...'})
-    excel_b64 = enrich(records, keywords)
     # Count only GPT‑backed records for progress
     total = len([r for r in records if r.get("type") != "trial"])
 

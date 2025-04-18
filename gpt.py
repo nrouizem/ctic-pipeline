@@ -228,6 +228,14 @@ def enrich(records, keywords, progress_cb=None):
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         for st, df in search_type_dataframes.items():
             sheet_name = st if len(st) <= 31 else st[:31]
+            if st == "company":
+                sheet_name = "Companies"
+            if st == "deal":
+                sheet_name = "Deals"
+            if st == "trial":
+                sheet_name = "Trials"
+            if st == "asset":
+                sheet_name = "Assets"
             df.to_excel(writer, index=False, sheet_name=sheet_name)
     output.seek(0)
     excel_base64 = base64.b64encode(output.read()).decode('utf-8')
