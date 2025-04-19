@@ -26,7 +26,7 @@ if not S3_BUCKET:
     raise RuntimeError("S3_BUCKET env‑var is required")
 
 # pre-warming cache
-model = SentenceTransformer('multi-qa-mpnet-base-cos-v1')
+model = SentenceTransformer('multi-qa-MiniLM-L6-cos-v1')
 
 @app.route('/', methods=['GET', 'POST'])
 def home():

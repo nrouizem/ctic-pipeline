@@ -21,8 +21,8 @@ _re_ranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L6-v2")
 
 def search(query, search_types, model,
            alpha=0.7,             # hybrid α weight
-           top_k=100,             # how many to retrieve initially
-           rerank_top_n=50):      # how many to re-rank
+           top_k=500,             # how many to retrieve initially
+           rerank_top_n=300):      # how many to re-rank
 
     # --- Stage 1: Hybrid semantic + lexical ---
     q_emb = model.encode(query + " " + " ".join(search_types))
@@ -70,7 +70,7 @@ def filter(company_score_pairs, doc_type):
     """
     records = []
     for record, score in company_score_pairs:
-        if len(records) == 20 or score < 0:
+        if len(records) == 50 or score < 0:
             return records
         if record["type"] == doc_type:
             records.append(record)
