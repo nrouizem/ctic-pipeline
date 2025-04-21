@@ -9,6 +9,7 @@ import io
 import os
 from sentence_transformers import SentenceTransformer
 import boto3, datetime
+from models import get_sentence_model
 
 
 def generate_unique_id():
@@ -26,7 +27,7 @@ if not S3_BUCKET:
     raise RuntimeError("S3_BUCKET env‑var is required")
 
 # pre-warming cache
-model = SentenceTransformer('multi-qa-MiniLM-L6-cos-v1')
+model = get_sentence_model()
 
 @app.route('/', methods=['GET', 'POST'])
 def home():

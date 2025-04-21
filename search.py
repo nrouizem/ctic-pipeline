@@ -3,6 +3,7 @@ import json
 import numpy as np
 from rank_bm25 import BM25Okapi
 from file_downloader import download_files_from_s3
+from models import get_sentence_model, get_cross_encoder
 
 download_files_from_s3()
 
@@ -14,10 +15,10 @@ _tokenized_corpus = [r["combined_text"].lower().split() for r in records]
 _bm25 = BM25Okapi(_tokenized_corpus)
 
 # load embeddings once
-_embeddings = np.load("data/embeddings.npy")
+_embeddings = np.load("data/embeddings.npy", mmap_mode="r")
 
 # Load a pretrained cross‑encoder for re‑ranking:
-_re_ranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L6-v2")
+_re_ranker = get_cross_encoder()
 
 def search(query, search_types, model,
            alpha=0.7,             # hybrid α weight
