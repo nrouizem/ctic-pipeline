@@ -50,10 +50,10 @@ def home():
             matched = search(' '.join(keywords), [search_type], model)  # restrict context
             filtered = filter(matched, doc_type=search_type)
             records.extend(filtered)
-            print([record["type"] for record in records])
-            if search_type != "trial":
+            exclude = ["trial", "award"]
+            if search_type not in exclude:
                 output += ', '.join([record["company"] for record in records])
-            if search_type == "trial":
+            else:
                 output += ""
 
         # Enqueue the enrichment task.

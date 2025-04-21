@@ -25,6 +25,7 @@ def search(query, search_types, model,
            rerank_top_n=300):      # how many to re-rank
 
     # --- Stage 1: Hybrid semantic + lexical ---
+    print("SEARCHING: ", query + " " + " ".join(search_types))
     q_emb = model.encode(query + " " + " ".join(search_types))
     sem_scores = util.dot_score(q_emb, _embeddings)[0].cpu().numpy()
     lex_scores = _bm25.get_scores(query.lower().split())
@@ -70,7 +71,7 @@ def filter(company_score_pairs, doc_type):
     """
     records = []
     for record, score in company_score_pairs:
-        if len(records) == 50 or score < 0:
+        if len(records) == 50:
             return records
         if record["type"] == doc_type:
             records.append(record)

@@ -169,20 +169,24 @@ def enrich(records, keywords, progress_cb=None):
     search_type_data = {}
     max_workers = 5
 
-    # Separate trial records and process non-trials concurrently
-    non_trial_records = [r for r in records if r.get("type") != "trial"]
+    # Separate gpt-needed records and process non-gpts concurrently
+    non_gpt_records = [r for r in records if r.get("type") not in ("trial","award")]
     trial_records = [r for r in records if r.get("type") == "trial"]
-    total = len(non_trial_records)
+    award_records = [r for r in records if r.get("type") == "award"]
+    total = len(non_gpt_records)
 
-    # Save cleaned trial records immediately (no GPT)
+    # Save cleaned trial and award records immediately (no GPT)
     for record in trial_records:
         clean_record = {k: v for k, v in record.items() if k not in ("type", "combined_text")}
         search_type_data.setdefault("trial", []).append(clean_record)
+    for record in award_records:
+        clean = {k:v for k,v in record.items() if k not in ("type","combined_text")}
+        search_type_data.setdefault("award", []).append(clean)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_record = {
             executor.submit(gpt_prompt, record, keywords): record 
-            for record in non_trial_records
+            for record in non_gpt_records
         }
         completed = 0
         for future in concurrent.futures.as_completed(future_to_record):
@@ -236,6 +240,8 @@ def enrich(records, keywords, progress_cb=None):
                 sheet_name = "Trials"
             if st == "asset":
                 sheet_name = "Assets"
+            if st == "award":
+                sheet_name = "Awards"
             df.to_excel(writer, index=False, sheet_name=sheet_name)
     output.seek(0)
     excel_base64 = base64.b64encode(output.read()).decode('utf-8')
