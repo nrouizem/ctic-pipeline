@@ -51,22 +51,15 @@ def home():
         print("SEARCH TYPES: ", ', '.join(search_types))
 
         records = []
-        output = ""
         for search_type in search_types:
             matched = search(' '.join(keywords), [search_type], model)  # restrict context
             filtered = filter(matched, doc_type=search_type)
             records.extend(filtered)
-            exclude = ["trial", "award"]
-            if search_type not in exclude:
-                output += ', '.join([record["company"] for record in records])
-            else:
-                output += ""
 
         # Enqueue the enrichment task.
         task = enrich_data_task.delay(records, keywords, request_id)
         return render_template('submission.html', 
-                               keywords=', '.join(keywords), 
-                               output=output,
+                               keywords=', '.join(keywords),
                                request_id=request_id,
                                task_id=task.id)
     return render_template('index.html')

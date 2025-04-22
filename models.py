@@ -11,4 +11,4 @@ def get_sentence_model():
 @lru_cache(maxsize=1)
 def get_cross_encoder():
     print("CROSS ENCODER")
-    return CrossEncoder("cross-encoder/ms-marco-TinyBERT-L2-v2")
+    return CrossEncoder("cross-encoder/ms-marco-MiniLM-L6-v2")

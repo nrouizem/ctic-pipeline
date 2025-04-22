@@ -5,6 +5,17 @@ import numpy as np
 from rank_bm25 import BM25Okapi
 from file_downloader import download_files_from_s3
 from models import get_sentence_model, get_cross_encoder
+import psutil, os
+
+process = psutil.Process(os.getpid())
+
+def log_mem(step: str):
+    """Print current RSS in MB with a label."""
+    log = os.getenv("LOG_MEM")
+    if not log:
+        return
+    rss = process.memory_info().rss / 1024**2
+    print(f"[MEM] {step:30s}: {rss:7.1f} MB")
 
 # ---- lazy initialization globals ----
 _init_lock = threading.Lock()
@@ -13,29 +24,32 @@ _initialized = False
 def _initialize_search_resources():
     global records, indices_by_type, _tokenized_corpus, _bm25, _embeddings, _re_ranker, _initialized
 
+    log_mem("start")
     # 1) ensure we have the latest files
     download_files_from_s3()
+    log_mem("after download_files_from_s3")
 
     # 2) load JSON
     with open("data/records.json", 'r') as f:
         records = json.load(f)
+    log_mem("after loading JSON")
 
     # 3) build indices_by_type
     indices_by_type = {}
     for idx, rec in enumerate(records):
         indices_by_type.setdefault(rec["type"], []).append(idx)
+    log_mem("after building indices_by_type")
 
-    # 4) BM25 corpus
-    _tokenized_corpus = [r["combined_text"].lower().split() for r in records]
-    _bm25 = BM25Okapi(_tokenized_corpus)
-
-    # 5) embeddings
+    # 4) embeddings (memory‑map)
     _embeddings = np.load("data/embeddings.npy", mmap_mode="r")
+    log_mem("after loading embeddings mmap")
 
-    # 6) cross‑encoder
+    # 5) cross‑encoder
     _re_ranker = get_cross_encoder()
+    log_mem("after get_cross_encoder()")
 
     _initialized = True
+    log_mem("finished init")
 
 def _ensure_initialized():
     with _init_lock:
@@ -43,6 +57,7 @@ def _ensure_initialized():
             _initialize_search_resources()
 
 def search(query, search_types, model,
+           sem_top_k=2000,         # first stage semantic cut
            alpha=0.7,             # hybrid α weight
            top_k=500,             # how many to retrieve initially
            rerank_top_n=300):      # how many to re-rank
@@ -52,11 +67,15 @@ def search(query, search_types, model,
 
     # --- Stage 1: Semantic + Lexical over sliced subset -------------------
 
-    # 1) encode the query
+    # normalize & combine
+    def normalize(arr: np.ndarray) -> np.ndarray:
+        mn, mx = arr.min(), arr.max()
+        return (arr - mn) / (mx - mn) if mx > mn else arr * 0
+
+    # 1) encode query
     q_emb = model.encode(query + " " + " ".join(search_types))
 
-    # 2) figure out which record‑indices we actually care about
-    #    (e.g. only "company" docs, or "deal" + "asset", etc.)
+    # 2) mask to your types
     mask_indices = sorted({
         i
         for doc_type in search_types
@@ -65,32 +84,30 @@ def search(query, search_types, model,
     if not mask_indices:
         return []
 
-    # 3) slice out only those rows from the mmap'd embeddings
+    # 3) embeddings slice + semantic scores
     emb_slice = _embeddings[mask_indices]
-
-    # 4) compute semantic scores on the small slice
     sem_scores = util.dot_score(q_emb, emb_slice)[0].cpu().numpy()
-
-    # 5) get full BM25 scores, then slice them too
-    full_lex = _bm25.get_scores(query.lower().split())
-    lex_scores = full_lex[mask_indices]
-
-    # 6) normalize & combine
-    def normalize(arr: np.ndarray) -> np.ndarray:
-        mn, mx = arr.min(), arr.max()
-        return (arr - mn) / (mx - mn) if mx > mn else arr * 0
-
     sem_norm = normalize(sem_scores)
-    lex_norm = normalize(lex_scores)
-    combined = alpha * sem_norm + (1 - alpha) * lex_norm
+    
+    # 4) pick top semantically
+    top_pos = np.argsort(sem_norm)[::-1][:sem_top_k]  # positions within `mask`
+    top_indices = [mask_indices[i] for i in top_pos]
+    top_sem_norm = sem_norm[top_pos]
 
-    # 7) build the initial candidate list of (record, score)
-    candidates = sorted(
-        [(records[i], score) for i, score in zip(mask_indices, combined)],
-        key=lambda x: x[1],
-        reverse=True
-    )[:top_k]
+    # build a small BM25 index
+    small_corpus = [records[i]["combined_text"].lower().split() for i in top_indices]
+    small_bm25   = BM25Okapi(small_corpus)
+    lex_scores_small = small_bm25.get_scores(query.lower().split())
+    lex_norm_small = normalize(lex_scores_small)
 
+    combined = alpha * top_sem_norm + (1-alpha) * lex_norm_small
+    # pick your final top_k
+    pick = np.argsort(combined)[::-1][:top_k]
+    candidates = [
+        (records[top_indices[i]], combined[i])
+        for i in pick
+    ]
+    log_mem("after stage 1")
     # --- Stage 2: Cross‑Encoder reranking on the head ----------------------
 
     # extract the top rerank_top_n candidates
@@ -111,7 +128,7 @@ def search(query, search_types, model,
     # append the tail of the original (unstable) ranking
     tail = candidates[rerank_top_n:]
     final = reranked + tail
-
+    log_mem("after stage 2")
     return final
 
 
