@@ -1,3 +1,4 @@
+import threading
 from sentence_transformers import util, SentenceTransformer, CrossEncoder
 import json
 import numpy as np
@@ -5,30 +6,49 @@ from rank_bm25 import BM25Okapi
 from file_downloader import download_files_from_s3
 from models import get_sentence_model, get_cross_encoder
 
-download_files_from_s3()
+# ---- lazy initialization globals ----
+_init_lock = threading.Lock()
+_initialized = False
 
-with open("data/records.json", 'r') as f:
-    records = json.load(f)
+def _initialize_search_resources():
+    global records, indices_by_type, _tokenized_corpus, _bm25, _embeddings, _re_ranker, _initialized
 
-# Precompute a mapping from document‑type → list of indices in `records`
-indices_by_type = {}
-for idx, rec in enumerate(records):
-    indices_by_type.setdefault(rec["type"], []).append(idx)
+    # 1) ensure we have the latest files
+    download_files_from_s3()
 
-# prepare a tokenized corpus for BM25
-_tokenized_corpus = [r["combined_text"].lower().split() for r in records]
-_bm25 = BM25Okapi(_tokenized_corpus)
+    # 2) load JSON
+    with open("data/records.json", 'r') as f:
+        records = json.load(f)
 
-# load embeddings once
-_embeddings = np.load("data/embeddings.npy", mmap_mode="r")
+    # 3) build indices_by_type
+    indices_by_type = {}
+    for idx, rec in enumerate(records):
+        indices_by_type.setdefault(rec["type"], []).append(idx)
 
-# Load a pretrained cross‑encoder for re‑ranking:
-_re_ranker = get_cross_encoder()
+    # 4) BM25 corpus
+    _tokenized_corpus = [r["combined_text"].lower().split() for r in records]
+    _bm25 = BM25Okapi(_tokenized_corpus)
+
+    # 5) embeddings
+    _embeddings = np.load("data/embeddings.npy", mmap_mode="r")
+
+    # 6) cross‑encoder
+    _re_ranker = get_cross_encoder()
+
+    _initialized = True
+
+def _ensure_initialized():
+    with _init_lock:
+        if not _initialized:
+            _initialize_search_resources()
 
 def search(query, search_types, model,
            alpha=0.7,             # hybrid α weight
            top_k=500,             # how many to retrieve initially
            rerank_top_n=300):      # how many to re-rank
+
+    # lazy init
+    _ensure_initialized()
 
     # --- Stage 1: Semantic + Lexical over sliced subset -------------------
 

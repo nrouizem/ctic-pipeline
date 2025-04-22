@@ -22,15 +22,20 @@ app.config['SEARCH_PASSWORD'] = os.environ.get("SEARCH_PASSWORD")
 
 S3_BUCKET = os.environ.get('S3_BUCKET_NAME')
 s3 = boto3.client("s3")
-download_files_from_s3()
 if not S3_BUCKET:
     raise RuntimeError("S3_BUCKET env‑var is required")
 
-# pre-warming cache
-model = get_sentence_model()
+model = None
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
+    global model
+
+    # ensure our heavy work only happens once
+    if model is None:
+        download_files_from_s3()         # grab JSON + embeddings
+        model = get_sentence_model()  # load the SentenceTransformer
+
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     
