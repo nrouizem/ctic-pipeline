@@ -170,9 +170,10 @@ def enrich(records, keywords, progress_cb=None):
     max_workers = 5
 
     # Separate gpt-needed records and process non-gpts concurrently
-    non_gpt_records = [r for r in records if r.get("type") not in ("trial","award")]
+    non_gpt_records = [r for r in records if r.get("type") not in ("trial","award", "asset")]
     trial_records = [r for r in records if r.get("type") == "trial"]
     award_records = [r for r in records if r.get("type") == "award"]
+    asset_records = [r for r in records if r.get("type") == "asset"]
     total = len(non_gpt_records)
 
     # Save cleaned trial and award records immediately (no GPT)
@@ -182,6 +183,9 @@ def enrich(records, keywords, progress_cb=None):
     for record in award_records:
         clean = {k:v for k,v in record.items() if k not in ("type","combined_text")}
         search_type_data.setdefault("award", []).append(clean)
+    for record in asset_records:
+        clean = {k:v for k,v in record.items() if k not in ("type","combined_text")}
+        search_type_data.setdefault("asset", []).append(clean)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_record = {

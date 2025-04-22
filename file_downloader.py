@@ -6,7 +6,7 @@ S3_BUCKET = os.environ.get('S3_BUCKET_NAME')
 S3_RECORDS_KEY = os.environ.get('S3_RECORDS_KEY')
 S3_EMBEDDINGS_KEY = os.environ.get('S3_EMBEDDINGS_KEY')
 RECORDS_PATH = 'data/records.json'
-EMBEDDINGS_PATH = 'data/embeddings.npy'
+EMBEDDINGS_PATH = 'data/embeddings_fp16.npy'
 
 def download_files_from_s3():
     """

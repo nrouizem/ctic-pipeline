@@ -6,6 +6,7 @@ from rank_bm25 import BM25Okapi
 from file_downloader import download_files_from_s3
 from models import get_sentence_model, get_cross_encoder
 import psutil, os
+import gc
 
 process = psutil.Process(os.getpid())
 
@@ -41,7 +42,7 @@ def _initialize_search_resources():
     log_mem("after building indices_by_type")
 
     # 4) embeddings (memory‑map)
-    _embeddings = np.load("data/embeddings.npy", mmap_mode="r")
+    _embeddings = np.load("data/embeddings_fp16.npy", mmap_mode="r")
     log_mem("after loading embeddings mmap")
 
     # 5) cross‑encoder
@@ -57,85 +58,88 @@ def _ensure_initialized():
             _initialize_search_resources()
 
 def search(query, search_types, model,
-           sem_top_k=2000,         # first stage semantic cut
-           alpha=0.7,             # hybrid α weight
-           top_k=500,             # how many to retrieve initially
-           rerank_top_n=300):      # how many to re-rank
+           sem_top_k=2000,      # first stage semantic cut
+           alpha=0.7,           # hybrid α weight
+           top_k=1000,          # how many to return
+           rerank_top_n=500):   # how many to rerank
 
-    # lazy init
     _ensure_initialized()
 
-    # --- Stage 1: Semantic + Lexical over sliced subset -------------------
-
-    # normalize & combine
     def normalize(arr: np.ndarray) -> np.ndarray:
         mn, mx = arr.min(), arr.max()
         return (arr - mn) / (mx - mn) if mx > mn else arr * 0
 
-    # 1) encode query
-    q_emb = model.encode(query + " " + " ".join(search_types))
-
-    # 2) mask to your types
-    mask_indices = sorted({
+    # 1) Semantic stage: filter by type, then chunked top-k
+    # flatten & filter indices_by_type
+    all_type_idxs = [
         i
-        for doc_type in search_types
-        for i in indices_by_type.get(doc_type, [])
-    })
-    if not mask_indices:
+        for t in search_types
+        for i in indices_by_type.get(t, [])
+    ]
+    if not all_type_idxs:
         return []
 
-    # 3) embeddings slice + semantic scores
-    emb_slice = _embeddings[mask_indices]
-    sem_scores = util.dot_score(q_emb, emb_slice)[0].cpu().numpy()
-    sem_norm = normalize(sem_scores)
-    
-    # 4) pick top semantically
-    top_pos = np.argsort(sem_norm)[::-1][:sem_top_k]  # positions within `mask`
-    top_indices = [mask_indices[i] for i in top_pos]
-    top_sem_norm = sem_norm[top_pos]
+    # encode once as a tensor
+    q_emb = model.encode(
+        query + " " + " ".join(search_types),
+        convert_to_tensor=True
+    )
 
-    # build a small BM25 index
-    small_corpus = [records[i]["combined_text"].lower().split() for i in top_indices]
-    small_bm25   = BM25Okapi(small_corpus)
-    lex_scores_small = small_bm25.get_scores(query.lower().split())
-    lex_norm_small = normalize(lex_scores_small)
+    # slice embeddings, run semantic_search
+    emb_slice = _embeddings[all_type_idxs].astype(np.float32)    # mmap‑backed, cheap
+    hits = util.semantic_search(
+        query_embeddings=q_emb,
+        corpus_embeddings=emb_slice,
+        top_k=sem_top_k
+    )[0]                                               # list of dicts
 
-    combined = alpha * top_sem_norm + (1-alpha) * lex_norm_small
-    # pick your final top_k
-    pick = np.argsort(combined)[::-1][:top_k]
+    # unpack hits → absolute record indices + normalized scores
+    top_idxs      = [all_type_idxs[h['corpus_id']] for h in hits]
+    top_sem_scores= np.array([h['score']        for h in hits])
+    top_sem_norm  = normalize(top_sem_scores)
+
+    # free big buffers
+    del emb_slice, hits, top_sem_scores
+    gc.collect()
+
+    # 2) Lexical stage: BM25 only on top_idxs
+    small_corpus = [records[i]["combined_text"].lower().split() for i in top_idxs]
+    small_bm25        = BM25Okapi(small_corpus)
+
+    lex_scores_small  = small_bm25.get_scores(query.lower().split())
+    lex_norm_small    = normalize(lex_scores_small)
+
+    # free corpus & bm25 if you like
+    del small_corpus, small_bm25
+    gc.collect()
+
+    # 3) Combine & pick top_k
+    combined = alpha * top_sem_norm + (1 - alpha) * lex_norm_small
+    pick     = np.argsort(combined)[::-1][:top_k]
     candidates = [
-        (records[top_indices[i]], combined[i])
+        (records[top_idxs[i]], combined[i])
         for i in pick
     ]
-    log_mem("after stage 1")
-    # --- Stage 2: Cross‑Encoder reranking on the head ----------------------
 
-    # extract the top rerank_top_n candidates
-    head = candidates[:rerank_top_n]
-    texts = [r["combined_text"] for r, _ in head]
+    # 4) Optional Cross‑Encoder rerank on the head
+    head    = candidates[:rerank_top_n]
+    texts   = [r["combined_text"] for r,_ in head]
     queries = [query] * len(head)
 
-    # batch predictions
     rerank_scores = _re_ranker.predict(list(zip(queries, texts)))
-
-    # attach new scores & sort
-    reranked = sorted(
+    reranked     = sorted(
         [(head[i][0], rerank_scores[i]) for i in range(len(head))],
         key=lambda x: x[1],
         reverse=True
     )
 
-    # append the tail of the original (unstable) ranking
-    tail = candidates[rerank_top_n:]
-    final = reranked + tail
-    log_mem("after stage 2")
+    final = reranked + candidates[rerank_top_n:]
     return final
-
 
 def filter(company_score_pairs, doc_type):
     """
     Filter the keyword relevance data to return most relevant results.
-    For now, returns top 20 or top n such that n.score > 0.
+    For now, returns top 50.
     Could potentially return results that surpass some relevance threshold.
     """
     records = []
@@ -144,3 +148,4 @@ def filter(company_score_pairs, doc_type):
             return records
         if record["type"] == doc_type:
             records.append(record)
+    return records

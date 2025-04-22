@@ -38,6 +38,7 @@ def home():
     if model is None:
         download_files_from_s3()         # grab JSON + embeddings
         model = get_sentence_model()  # load the SentenceTransformer
+        _ = model.encode("warm up")
     
     if request.method == 'POST':
         # Retrieve the keywords (company names) from the form.
@@ -51,10 +52,11 @@ def home():
         print("SEARCH TYPES: ", ', '.join(search_types))
 
         records = []
+        matched = search(' '.join(keywords), search_types, model)
         for search_type in search_types:
-            matched = search(' '.join(keywords), [search_type], model)  # restrict context
             filtered = filter(matched, doc_type=search_type)
-            records.extend(filtered)
+            if filtered:
+                records.extend(filtered)
 
         # Enqueue the enrichment task.
         task = enrich_data_task.delay(records, keywords, request_id)
