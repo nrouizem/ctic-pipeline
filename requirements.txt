@@ -8,3 +8,4 @@ gunicorn
 XlsxWriter
 sentence_transformers
 rank_bm25>=0.2.2
+psutil
