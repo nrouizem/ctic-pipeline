@@ -31,13 +31,13 @@ model = None
 def home():
     global model
 
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
     # ensure our heavy work only happens once
     if model is None:
         download_files_from_s3()         # grab JSON + embeddings
         model = get_sentence_model()  # load the SentenceTransformer
-
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
     
     if request.method == 'POST':
         # Retrieve the keywords (company names) from the form.
