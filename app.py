@@ -142,6 +142,9 @@ def download_file(task_id):
     # Fastest UX: just HTTP‑redirect the browser to S3
     return redirect(presigned_url, code=302)
 
+@app.route("/healthz")
+def healthz():
+    return "OK", 200
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
