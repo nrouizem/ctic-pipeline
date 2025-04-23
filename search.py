@@ -139,13 +139,15 @@ def search(query, search_types, model,
 def filter(company_score_pairs, doc_type):
     """
     Filter the keyword relevance data to return most relevant results.
-    For now, returns top 50.
+    For now, returns top 50 with a threshold score.
     Could potentially return results that surpass some relevance threshold.
     """
     records = []
     for record, score in company_score_pairs:
         if len(records) == 50:
-            return records
+            break
+        if score < -1:
+            break
         if record["type"] == doc_type:
             records.append(record)
     return records

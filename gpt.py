@@ -16,13 +16,13 @@ client = OpenAI(
 # The prompt instructs the model to search for the following fields:
 # Company, Asset, Asset Target, Asset Type, Modality, Disease, Global Highest Phase, Indication, Mechanism/Technology.
 # The response should be in valid JSON without any additional commentary.
-def build_prompt(record, keywords):
+def build_prompt(record, prompt):
     if record["type"] == "company":
         prompt = f"""
                     You are an expert in biopharmaceutical research with the ability to search the web for up-to-date information.
                     For the company "{record['company']}", please research and provide the following details:
                     1. Company: The full name of the company.
-                    2. Asset: The name of the asset or product they are developing that is related to {' '.join(keywords)}.
+                    2. Asset: The name of the asset or product they are developing that is related to this prompt: {prompt}.
                     3. Asset Target: The specific biological target or pathway the asset addresses.
                     4. Asset Type: The specific type of asset (e.g., small molecule, biologic, device, etc.).
                     5. Modality: The specific therapeutic modality being used (e.g., antibody, gene therapy, cell therapy, etc.).
@@ -46,7 +46,7 @@ def build_prompt(record, keywords):
     elif record["type"] == "deal":
         prompt = f"""
                     You are an expert in biopharmaceutical deal analysis with the ability to search the web for up-to-date information.
-                    For the deal involving "{record['acquirer']}" and "{record['acquired_company']}" related to "{' '.join(keywords)}", 
+                    For the deal involving "{record['acquirer']}" and "{record['acquired_company']}" related to this prompt: "{prompt}", 
                     please research and provide the following details:
                     1. Acquirer: The full name of the company that is acquiring or investing.
                     2. Target Company: The name of the company or asset being acquired or partnered with.
@@ -99,9 +99,9 @@ def extract_json_and_source(text):
     return data
 
 # Function to call the GPT model and parse the returned JSON.
-def gpt_prompt(record, keywords, max_retries=3):
+def gpt_prompt(record, prompt, max_retries=3):
     company_name = record["company"]
-    prompt = build_prompt(record, keywords)
+    prompt = build_prompt(record, prompt)
     
     # Set up the conversation for ChatCompletion (if using a chat-based model)
     messages = [
@@ -141,7 +141,7 @@ def gpt_prompt(record, keywords, max_retries=3):
         "Mechanism/Technology": None
     }
 
-def enrich(records, keywords, progress_cb=None):
+def enrich(records, prompt, progress_cb=None):
     """
     Enriches a list of records concurrently and returns an Excel file
     (as a Base64-encoded string) with one sheet per search type.
@@ -189,7 +189,7 @@ def enrich(records, keywords, progress_cb=None):
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_record = {
-            executor.submit(gpt_prompt, record, keywords): record 
+            executor.submit(gpt_prompt, record, prompt): record 
             for record in non_gpt_records
         }
         completed = 0

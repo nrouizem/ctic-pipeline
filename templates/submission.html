@@ -62,7 +62,7 @@
 <body>
   <div class="container">
     <h1>Processing Your Submission...</h1>
-    <p><strong>Keywords:</strong> {{ keywords }}</p>
+    <p><strong>Prompt:</strong> {{ prompt }}</p>
     <p><strong>Your Unique ID:</strong> {{ request_id }}</p>
     <p>
       <strong>Task status:</strong>
@@ -103,7 +103,7 @@
           if (data.state === 'SUCCESS') {
             document.getElementById('status').innerText = data.status;
             // Display the download link.
-            document.getElementById('download_link').href = '/download/{{ task_id }}?keywords={{ keywords|urlencode }}';
+            document.getElementById('download_link').href = '/download/{{ task_id }}?prompt={{ prompt|urlencode }}';
             document.getElementById('download').style.display = 'block';
             // Now that the task is complete, show the "Perform Another Search" button.
             document.getElementById('search-again').style.display = 'block';

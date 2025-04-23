@@ -1,16 +1,8 @@
-from flask import Flask, request, render_template, jsonify, send_file, redirect, url_for, session, flash, abort
+from flask import Flask, request, render_template, jsonify, redirect, url_for, session, flash, abort
 from tasks import enrich_data_task, celery  # celery is our Celery app instance
-import re
 import uuid
-from search import *
-from file_downloader import download_files_from_s3
-import base64
-import io
 import os
-from sentence_transformers import SentenceTransformer
-import boto3, datetime
-from models import get_sentence_model
-
+import boto3
 
 def generate_unique_id():
     # Generate a unique integer (here we take the last 8 digits, adjust as needed)
@@ -25,43 +17,24 @@ s3 = boto3.client("s3")
 if not S3_BUCKET:
     raise RuntimeError("S3_BUCKET env‑var is required")
 
-model = None
-
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    global model
-
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     
-    # ensure our heavy work only happens once
-    if model is None:
-        download_files_from_s3()         # grab JSON + embeddings
-        model = get_sentence_model()  # load the SentenceTransformer
-        _ = model.encode("warm up")
-    
     if request.method == 'POST':
         # Retrieve the keywords (company names) from the form.
-        keywords = request.form.get('keywords')
+        prompt = request.form.get('prompt')
         search_types = request.form.getlist('search_types')
         request_id = generate_unique_id()
-        # Split by commas or whitespace.
-        keywords = re.split(r'[,\s]+', keywords)
         # print input to have a way to see what ppl are searching (not great but whatever)
-        print("KEYWORDS: ", ', '.join(keywords))
+        print("PROMPT: ", prompt)
         print("SEARCH TYPES: ", ', '.join(search_types))
 
-        records = []
-        matched = search(' '.join(keywords), search_types, model)
-        for search_type in search_types:
-            filtered = filter(matched, doc_type=search_type)
-            if filtered:
-                records.extend(filtered)
-
         # Enqueue the enrichment task.
-        task = enrich_data_task.delay(records, keywords, request_id)
+        task = enrich_data_task.delay(prompt, search_types, request_id)
         return render_template('submission.html', 
-                               keywords=', '.join(keywords),
+                               prompt=prompt,
                                request_id=request_id,
                                task_id=task.id)
     return render_template('index.html')
