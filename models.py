@@ -5,10 +5,10 @@ from sentence_transformers import SentenceTransformer, CrossEncoder
 
 @lru_cache(maxsize=1)
 def get_sentence_model():
-    print("SENTENCE MODEL")
+    print("Loading sentence model...")
     return SentenceTransformer("multi-qa-MiniLM-L6-cos-v1")
 
 @lru_cache(maxsize=1)
 def get_cross_encoder():
-    print("CROSS ENCODER")
+    print("Loading cross encoder...")
     return CrossEncoder("cross-encoder/ms-marco-TinyBERT-L2-v2")
